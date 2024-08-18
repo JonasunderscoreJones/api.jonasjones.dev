@@ -1,8 +1,37 @@
 addEventListener('fetch', event => {
-	event.respondWith(handleRequest(event.request));
+	event.respondWith(handleRequest(event));
   });
 
-  async function handleRequest(request) {
+  async function recordRequest(request) {
+
+	const analyticsData = {
+	  timestamp: Date.now(),
+	  domain: new URL(request.url).hostname,
+	  method: request.method,
+	  path: new URL(request.url).pathname,
+	  ipcountry: request.cf.country,
+	}
+	const ANALYTICS_URL = 'https://analytics.jonasjones.dev/requests/record';
+
+	const response = await fetch(ANALYTICS_URL, {
+	  method: 'POST',
+	  headers: {
+		'Content-Type': 'application/json',
+		'Authorization': ANALYTICS_API_KEY,
+	  },
+	  body: JSON.stringify(analyticsData)
+	});
+
+	if (response.ok) {
+	  console.log('Request recorded successfully');
+	} else {
+	  console.error('Failed to record request:', response.status, await response.text());
+	}
+  }
+
+  async function handleRequest(event) {
+	event.waitUntil(recordRequest(event.request));
+	const request = event.request;
 	const { pathname, search } = new URL(request.url);
 
 	// List of built-in paths that should not trigger an error
